@@ -1,14 +1,15 @@
 <script>
 	import { getData } from "./utils";
 	import { urls, types, codes } from "./config";
-	import RankChart from "./RankChart.svelte";
-	import ColChart from "./ColChart.svelte";
-	import SpineChart from "./SpineChart.svelte";
-	import GridChart from "./GridChart.svelte";
-	import GridLegend from "./GridLegend.svelte";
-	import Select from "./Select.svelte";
+	import ColChart from "./chart/ColChart.svelte";
+	import SpineChart from "./chart/SpineChart.svelte";
+	import GridChart from "./chart/GridChart.svelte";
+	import GridLegend from "./chart/GridLegend.svelte";
+	import Select from "./ui/Select.svelte";
+	import Map from "./map/Map.svelte";
 	
 	let options, selected, place, quartiles;
+	let map = null;
 	
 	getData(urls.options)
 	.then(res => {
@@ -33,10 +34,12 @@
 				.then(quart => {
 					quartiles = quart;
 					place = json;
+					fitMap(place.bounds);
 				});
 			} else {
 				quartiles = null;
 				place = json;
+				fitMap(place.bounds);
 			}
 		})
 	}
@@ -48,6 +51,12 @@
 			return {x: labels[i], y: source[key]}
 		});
 		return data;
+	}
+
+	function fitMap(bounds) {
+		if (map) {
+			map.fitBounds(bounds);
+		}
 	}
 </script>
 
@@ -144,9 +153,9 @@
 			<GridLegend data="{makeData(place.data.ethnicity.perc['2011'], 'ethnicity')}"/>
 		</div>
 	</div>
-	{#if false}
-	<div class="map">Map goes here</div>
-	{/if}
+	<div class="map">
+		<Map bind:map location={{bounds: place.bounds}}/>
+	</div>
 </div>
 
 {#if place.children[0]}
@@ -216,7 +225,7 @@
 		display: grid;
 		width: 100%;
 		grid-gap: 20px;
-		grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
 		justify-content: stretch;
 		grid-auto-flow: row dense;
 	}
@@ -236,13 +245,7 @@
 	.map {
 		grid-column: span 2;
 		grid-row: span 2;
-		background-color: #eee;
 		min-height: 300px;
-		display: flex;
-		flex-flow: column;
-		justify-content: center;
-		text-align: center;
-		color: #999;
 	}
 	@media screen and (max-width:575px){
 		.map {

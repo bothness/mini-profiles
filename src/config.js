@@ -38,3 +38,23 @@ export const codes = {
 		{code: 'other'}
 	]
 }
+
+export let mapSources = {
+	crd: '',
+	ward: ''
+}
+
+export let mapLayers = {
+	ctry: {
+		source: 'crd',
+		layer: '',
+		code: '',
+		name: ''
+	},
+	ward: {
+		source: 'ward',
+		layer: '',
+		code: '',
+		name: ''
+	}
+}
