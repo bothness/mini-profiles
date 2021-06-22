@@ -144,7 +144,7 @@
 	</div>
 	<div>
 		<div style="width: 240px; float: right;">
-		<Select {options} bind:selected group="type" search={true} on:select="{() => { if (selected) { loadArea(selected.code) }}}"/>
+		<Select {options} bind:selected group="typenm" search={true} on:select="{() => { if (selected) { loadArea(selected.code) }}}"/>
 		</div>
 	</div>
 </div>
