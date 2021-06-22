@@ -1,11 +1,15 @@
 <script>
+	import GridLegend from './GridLegend.svelte';
 	export let data;
+	export let height = 80;
 	export let xKey = "x";
 	export let yKey = "y";
+	export let parentKey = "ew";
 	export let width = 5;
 	export let colors = ['#206095', '#A8BD3A', '#003C57', '#27A0CC', '#118C7B', '#F66068', '#746CB1', '#22D0B6', 'lightgrey'];
 	export let vertical = true;
 	export let round = false;
+	export let decimals = 0;
 	
 	let cells;
 	
@@ -33,13 +37,25 @@
 	$: data && update();
 </script>
 
-<div class="grid" {style}>
-	{#each cells as cell}
-	<div class:round style="background-color: {cell.color}"/>
-	{/each}
+<div class="chart" style="height: {height}px;">
+	<div class="grid" {style}>
+		{#each cells as cell}
+		<div class:round style="background-color: {cell.color}"/>
+		{/each}
+	</div>
+</div>
+<div class="legend">
+	<GridLegend {data} {parentKey} {round} {decimals}/>
 </div>
 
 <style>
+	.chart {
+		width: 100%;
+	}
+	.legend {
+		width: 100%;
+		margin-top: 3px;
+	}
 	.grid {
 		display: grid;
 		width: 100%;

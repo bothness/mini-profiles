@@ -15,8 +15,8 @@
 	export let yTick = 15;
 	export let dxTick = 0;
 	export let dyTick = 0;
-	export let lineColor = '#aaa';
-	export let textColor = '#666';
+	export let lineColor = '#999';
+	export let textColor = '#555';
 	export let solid = false;
 	export let stagger = false;
 	export let median = true;

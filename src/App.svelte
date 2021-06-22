@@ -11,7 +11,7 @@
 	import MapSource from "./map/MapSource.svelte";
 	import MapLayer from "./map/MapLayer.svelte";
 	
-	let options, selected, place, quartiles;
+	let options, selected, place, ew, quartiles;
 	let map = null;
 	let active = {
 		selected: null,
@@ -29,6 +29,7 @@
 		});
 		options = res.sort((a, b) => a.name.localeCompare(b.name));
 		selected = options.find(d => d.name == 'Fareham');
+		loadEW();
 		loadArea(selected.code);
 	});
 	
@@ -53,14 +54,31 @@
 				updateActive(place);
 				fitMap(place.bounds);
 			}
-		})
+		});
+	}
+
+	function loadEW() {
+		const code = 'K04000001';
+		fetch(urls.places + code + '.json')
+		.then(res => res.json())
+		.then(json => {
+			json.children = options.filter(d => d.parent == code);
+			ew = json;
+		});
 	}
 	
-	function makeData(source, code) {
-		const keys = codes[code].map(d => d.code);
-		const labels = codes[code].map(d => d.label ? d.label : d.code);
-		const data = keys.map((key, i) => {
-			return {x: labels[i], y: source[key]}
+	function makeData(props) {
+		let code = props[0];
+		let val = props[1];
+		let year = props[2];
+		
+		let source = place.data[code][val][year];
+		let sourceEW = ew.data[code][val][year];
+
+		let keys = codes[code].map(d => d.code);
+		let labels = codes[code].map(d => d.label ? d.label : d.code);
+		let data = keys.map((key, i) => {
+			return {x: labels[i], y: source[key], ew: sourceEW[key]};
 		});
 		return data;
 	}
@@ -83,26 +101,28 @@
 		let fillProps = ['fill-color', 'fill-opacity'];
 		let lineProps = ['line-color', 'line-width', 'line-opacity'];
 
-		// NOTE!!! SHOULD USE LAYOUT.VISIBILITY = 0 FOR INACTIVE LAYERS!!!
-
-		// Change layer paint properties if geography level changes
+		// Change layer visibility and paint properties if geography level changes
 		if (map && active.type != prev.type) {
-			// Reset map layer paint properties
+			// Reset map layer visibility properties
 			keys.forEach(key => {
-				fillProps.forEach(prop => map.setPaintProperty(key + '-fill', prop, mapPaint.fill[prop]));
-				lineProps.forEach(prop => {
-					map.setPaintProperty(key + '-bounds', prop, mapPaint.line[prop]);
-					map.setPaintProperty(key + '-self', prop, mapPaint.line[prop]);
-				});
+				map.setLayoutProperty(key + '-fill', 'visibility', 'none');
+				map.setLayoutProperty(key + '-bounds', 'visibility', 'none');
+				map.setLayoutProperty(key + '-self', 'visibility', 'none');
 			});
 
-			// Set new paint properties
+			// Set new visibility and paint properties
+			map.setLayoutProperty(type + '-fill', 'visibility', 'visible');
+			map.setLayoutProperty(type + '-bounds', 'visibility', 'visible');
+			map.setLayoutProperty(type + '-self', 'visibility', 'visible');
 			lineProps.forEach(prop => map.setPaintProperty(type + '-self', prop, mapPaint['line-self'][prop]));
+				
 			if (place.parents[0]) {
 				fillProps.forEach(prop => map.setPaintProperty(type + '-fill', prop, mapPaint[children[0] ? 'fill-active' : 'fill-self'][prop]));
 				lineProps.forEach(prop => map.setPaintProperty(type + '-bounds', prop, mapPaint['line-active'][prop]));
 			}
 			if (childType) {
+				map.setLayoutProperty(childType + '-fill', 'visibility', 'visible');
+				map.setLayoutProperty(childType + '-bounds', 'visibility', 'visible');
 				fillProps.forEach(prop => map.setPaintProperty(childType + '-fill', prop, mapPaint['fill-child'][prop]));
 				lineProps.forEach(prop => map.setPaintProperty(childType + '-bounds', prop, mapPaint['line-child'][prop]));
 			}
@@ -123,7 +143,7 @@
 
 <Warning/>
 
-{#if place}
+{#if place && ew}
 <div class="grid">
 	<div class="text-small">
 		{#if place.parents[0]}
@@ -195,26 +215,16 @@
 	<div>
 		<span class="text-label">Age profile</span><br/>
 		<div class="chart" style="height: 85px;">
-			<ColChart data="{makeData(place.data.age10yr.perc['2011'], 'age10yr')}"/>
+			<ColChart data="{place && makeData(['age10yr', 'perc', '2011'])}"/>
 		</div>
 	</div>
 	<div>
 		<span class="text-label">Sex</span><br/>
-		<div class="chart" style="height: 80px;">
-			<GridChart data="{makeData(place.data.population.perc['2011'], 'population')}"/>
-		</div>
-		<div class="legend">
-			<GridLegend data="{makeData(place.data.population.perc['2011'], 'population')}"/>
-		</div>
+		<GridChart data="{place && makeData(['population', 'perc', '2011'])}"/>
 	</div>
 	<div>
 		<span class="text-label">General health</span><br/>
-		<div class="chart" style="height: 80px;">
-			<GridChart data="{makeData(place.data.health.perc['2011'], 'health')}"/>
-		</div>
-		<div class="legend">
-			<GridLegend data="{makeData(place.data.health.perc['2011'], 'health')}"/>
-		</div>
+		<GridChart data="{place && makeData(['health', 'perc', '2011'])}"/>
 	</div>
 	<div class="map">
 		<Map bind:map location={{bounds: place.bounds}}>
@@ -230,6 +240,7 @@
 					highlighted={active.highlighted}
 					hover={true}
 					hovered={active.hovered}
+					layout={{visibility: active.type == 'wd' || active.childType == 'wd' ? 'visible' : 'none'}}
 					paint={active.type == 'wd' ? mapPaint['fill-self'] : active.childType == 'wd' ? mapPaint['fill-child'] : mapPaint.fill}/>
 				<MapLayer
 					{...mapLayers.wd}
@@ -238,12 +249,14 @@
 					selected={active.selected}
 					highlight={true}
 					highlighted={active.highlighted}
+					layout={{visibility: active.type == 'wd' || active.childType == 'wd' ? 'visible' : 'none'}}
 					paint={active.type == 'wd' ? mapPaint['line-active'] : active.childType == 'wd' ? mapPaint['line-child'] : mapPaint.line}/>
 				<MapLayer
 					{...mapLayers.wd}
 					id="wd-self"
 					type="line"
 					selected={active.selected}
+					layout={{visibility: active.type == 'wd' ? 'visible' : 'none'}}
 					paint={active.type == 'wd' ? mapPaint['line-self'] : mapPaint.line}/>
 			</MapSource>
 			<MapSource {...mapSources.crd}>
@@ -259,6 +272,7 @@
 					highlighted={active.highlighted}
 					hover={true}
 					hovered={active.hovered}
+					layout={{visibility: active.type == key || active.childType == key ? 'visible' : 'none'}}
 					paint={active.type == key ? mapPaint['fill-active'] : active.childType == key ? mapPaint['fill-child'] : mapPaint.fill}/>
 				<MapLayer
 					{...mapLayers[key]}
@@ -267,12 +281,14 @@
 					selected={active.selected}
 					highlight={true}
 					highlighted={active.highlighted}
+					layout={{visibility: active.type == key || active.childType == key ? 'visible' : 'none'}}
 					paint={active.type == key ? mapPaint['line-active'] : active.childType == key ? mapPaint['line-child'] : mapPaint.line}/>
 				<MapLayer
 					{...mapLayers[key]}
 					id={key + "-self"}
 					type="line"
 					selected={active.selected}
+					layout={{visibility: active.type == key ? 'visible' : 'none'}}
 					paint={active.type == key ? mapPaint['line-self'] : mapPaint.line}/>
 				{/each}
 			</MapSource>
@@ -280,21 +296,11 @@
 	</div>
 	<div>
 		<span class="text-label">Economic activity</span><br/>
-		<div class="chart" style="height: 80px;">
-			<GridChart data="{makeData(place.data.economic.perc['2011'], 'economic')}"/>
-		</div>
-		<div class="legend">
-			<GridLegend data="{makeData(place.data.economic.perc['2011'], 'economic')}"/>
-		</div>
+		<GridChart data="{place && makeData(['economic', 'perc', '2011'])}"/>
 	</div>
 	<div>
 		<span class="text-label">Ethnicity</span><br/>
-		<div class="chart" style="height: 80px;">
-			<GridChart data="{makeData(place.data.ethnicity.perc['2011'], 'ethnicity')}"/>
-		</div>
-		<div class="legend">
-			<GridLegend data="{makeData(place.data.ethnicity.perc['2011'], 'ethnicity')}"/>
-		</div>
+		<GridChart data="{place && makeData(['ethnicity', 'perc', '2011'])}"/>
 	</div>
 </div>
 
@@ -377,10 +383,6 @@
 	}
 	.chart {
 		width: 100%;
-	}
-	.legend {
-		width: 100%;
-		margin-top: 3px;
 	}
 	.map {
 		grid-column: span 2;
