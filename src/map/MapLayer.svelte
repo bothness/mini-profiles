@@ -18,7 +18,8 @@
 	export let layout = {};
 	export let paint = {};
 	export let data = null;
-	export let geoCode = null;
+	export let code = null;
+	export let name = 'name';
 	export let colorCode = null;
 	export let click = false;
 	export let ignoreClick = false;
@@ -77,7 +78,7 @@
 			map.setFeatureState({
 				source: source,
 				sourceLayer: sourceLayer,
-				id: d[geoCode]
+				id: d[code]
 			}, {
 				color: d[colorCode]
 			});
@@ -115,38 +116,40 @@
 	if (click) {
 		map.on('click', id, (e) => {
       if (e.features.length > 0 && !ignoreClick) {
-				selected = e.features[0].id;
+				if (highlighted.includes(e.features[0].id)) {
+					selected = e.features[0].id;
 
-				dispatch('select', {
-					code: selected
-				});
-				
-				if (selectedPrev) {
-					map.setFeatureState(
-            { source: source, sourceLayer: sourceLayer, id: selectedPrev },
-            { selected: false }
-          );
-				}
-				
-				map.setFeatureState(
-          { source: source, sourceLayer: sourceLayer, id: selected },
-          { selected: true }
-				);
-
-				if (clickCenter) {
-					let center = centroid(e.features[0].toJSON().geometry);
-					map.flyTo({
-						center: center.geometry.coordinates
+					dispatch('select', {
+						code: selected
 					});
-				}
 				
-				selectedPrev = selected;
+					if (selectedPrev) {
+						map.setFeatureState(
+        	    { source: source, sourceLayer: sourceLayer, id: selectedPrev },
+        	    { selected: false }
+        	  );
+					}
+				
+					map.setFeatureState(
+        	  { source: source, sourceLayer: sourceLayer, id: selected },
+        	  { selected: true }
+					);
+
+					if (clickCenter) {
+						let center = centroid(e.features[0].toJSON().geometry);
+						map.flyTo({
+							center: center.geometry.coordinates
+						});
+					}
+				
+					selectedPrev = selected;
+				}
 			}
     });
 	}
 	
 	// Updates the selected geo code if it is changed elsewhere in the app (outside of this component)
-	$: if (click && selected != selectedPrev) {
+	$: if (selected != selectedPrev) {
 		if (selectedPrev) {
 			map.setFeatureState(
 				{ source: source, sourceLayer: sourceLayer, id: selectedPrev },
@@ -166,27 +169,32 @@
 	if (hover) {
 		map.on('mousemove', id, (e) => {
       if (e.features.length > 0) {
-        if (hovered) {
-          map.setFeatureState(
-            { source: source, sourceLayer: sourceLayer, id: hovered },
-            { hovered: false }
-          );
-        }
-				hovered = hoveredPrev = e.features[0].id;
+				if (highlighted.includes(e.features[0].id)) {
+					if (hovered) {
+          	map.setFeatureState(
+            	{ source: source, sourceLayer: sourceLayer, id: hovered },
+            	{ hovered: false }
+          	);
+        	}
+					hovered = hoveredPrev = e.features[0].id;
 
-        map.setFeatureState(
-          { source: source, sourceLayer: sourceLayer, id: hovered },
-          { hovered: true }
-        );
+        	map.setFeatureState(
+        	  { source: source, sourceLayer: sourceLayer, id: hovered },
+        	  { hovered: true }
+        	);
 
-        // Change the cursor style as a UI indicator.
-				map.getCanvas().style.cursor = 'pointer';
+        	// Change the cursor style as a UI indicator.
+					map.getCanvas().style.cursor = 'pointer';
 
-				// Show popup
-				popup
-					.setLngLat(e.lngLat)
-					.setHTML(`<strong>${e.features[0].properties.name}</strong>`)
-					.addTo(map);
+					// Show popup
+					popup
+						.setLngLat(e.lngLat)
+						.setHTML(`<strong>${e.features[0].properties[name]}</strong>`)
+						.addTo(map);
+				} else {
+					// Remove popup
+					popup.remove();
+				}
       }
 		});
 		
