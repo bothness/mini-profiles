@@ -1,7 +1,7 @@
 <script>
 	import { getContext } from 'svelte';
 
-	const { data, xGet, yGet, yRange, xScale, y } = getContext('LayerCake');
+	const { data, xGet, yGet, yRange, xScale, yScale, y, z } = getContext('LayerCake');
 
 	$: columnWidth = d => {
 		const vals = $xGet(d);
@@ -28,6 +28,7 @@
 <style>
 	.column-group {
 		font-size: .85em;
+		isolation: auto;
 	}
 </style>
 
@@ -44,6 +45,19 @@
 			{stroke}
 			stroke-width="{strokeWidth}"
 		/>
+		{#if $z}
+		<rect
+			class='group-rect'
+			data-id="{i}"
+			x="{$xScale.bandwidth ? $xGet(d) : $xGet(d)[0]}"
+			y="{$yScale($z(d)) - 1}"
+			width="{$xScale.bandwidth ? $xScale.bandwidth() : columnWidth(d)}"
+			height="2"
+			fill="#27A0CC"
+			{stroke}
+			stroke-width="{strokeWidth}"
+		/>
+		{/if}
 	  <text
 	  	x="{$xScale.bandwidth ? $xGet(d) + ($xScale.bandwidth() / 2) : $xGet(d)[0]}"
 	  	y='{$yGet(d) - 4}'

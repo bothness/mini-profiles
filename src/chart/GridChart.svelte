@@ -1,10 +1,10 @@
 <script>
-	import GridLegend from './GridLegend.svelte';
+	import Legend from './Legend.svelte';
 	export let data;
 	export let height = 80;
 	export let xKey = "x";
 	export let yKey = "y";
-	export let parentKey = "ew";
+	export let zKey = "ew";
 	export let width = 5;
 	export let colors = ['#206095', '#A8BD3A', '#003C57', '#27A0CC', '#118C7B', '#F66068', '#746CB1', '#22D0B6', 'lightgrey'];
 	export let vertical = true;
@@ -45,7 +45,7 @@
 	</div>
 </div>
 <div class="legend">
-	<GridLegend {data} {parentKey} {round} {decimals}/>
+	<Legend {data} {zKey} {round} {decimals}/>
 </div>
 
 <style>

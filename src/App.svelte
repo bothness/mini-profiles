@@ -1,17 +1,16 @@
 <script>
-	import { getData, suffixer } from "./utils";
-	import { urls, types, codes, mapSources, mapLayers, mapPaint } from "./config";
+	import { getData, suffixer, changeClass, changeStr } from "./utils";
+	import { urls, types, codes, mapStyle, mapSources, mapLayers, mapPaint } from "./config";
 	import ColChart from "./chart/ColChart.svelte";
 	import SpineChart from "./chart/SpineChart.svelte";
-	import GridChart from "./chart/GridChart.svelte";
-	import GridLegend from "./chart/GridLegend.svelte";
+	import StackedBarChart from "./chart/StackedBarChart.svelte";
 	import Select from "./ui/Select.svelte";
 	import Warning from "./ui/Warning.svelte";
 	import Map from "./map/Map.svelte";
 	import MapSource from "./map/MapSource.svelte";
 	import MapLayer from "./map/MapLayer.svelte";
 	
-	let options, selected, place, ew, quartiles;
+	let options, selected, place, ew, quartiles, w, cols;
 	let map = null;
 	let active = {
 		selected: null,
@@ -20,6 +19,7 @@
 		highlighted: [],
 		hovered:  null
 	};
+	let overtime = false;
 	
 	getData(urls.options)
 	.then(res => {
@@ -70,15 +70,15 @@
 	function makeData(props) {
 		let code = props[0];
 		let val = props[1];
-		let year = props[2];
 		
-		let source = place.data[code][val][year];
-		let sourceEW = ew.data[code][val][year];
+		let source = place.data[code][val]['2011'];
+		let sourcePrev = place.data[code][val]['2001'];
+		let sourceEW = ew.data[code][val]['2011'];
 
 		let keys = codes[code].map(d => d.code);
 		let labels = codes[code].map(d => d.label ? d.label : d.code);
 		let data = keys.map((key, i) => {
-			return {x: labels[i], y: source[key], ew: sourceEW[key]};
+			return {x: labels[i], y: source[key], ew: sourceEW[key], prev: sourcePrev[key]};
 		});
 		return data;
 	}
@@ -92,7 +92,6 @@
 		let childType = children[0] ? place.children[0].type : null;
 
 		active.selected = code;
-		console.log(code);
 		active.type = type;
 		active.childType = childType;
 		active.highlighted = [...siblings, ...children];
@@ -102,27 +101,26 @@
 		let lineProps = ['line-color', 'line-width', 'line-opacity'];
 
 		// Change layer visibility and paint properties if geography level changes
-		if (map && active.type != prev.type) {
-			// Reset map layer visibility properties
+		if (map && (active.type != prev.type || active.childType != prev.childType)) {
+			// Set map layer visibility properties
 			keys.forEach(key => {
-				map.setLayoutProperty(key + '-fill', 'visibility', 'none');
-				map.setLayoutProperty(key + '-bounds', 'visibility', 'none');
-				map.setLayoutProperty(key + '-self', 'visibility', 'none');
+				let visibility = key == type || (childType && key == childType) ? 'visible' : 'none';
+				map.setLayoutProperty(key + '-fill', 'visibility', visibility);
+				map.setLayoutProperty(key + '-bounds', 'visibility', visibility);
+				if (place.parents[0]) {
+					map.setLayoutProperty(key + '-self', 'visibility', visibility);
+				}
 			});
 
-			// Set new visibility and paint properties
-			map.setLayoutProperty(type + '-fill', 'visibility', 'visible');
-			map.setLayoutProperty(type + '-bounds', 'visibility', 'visible');
-			map.setLayoutProperty(type + '-self', 'visibility', 'visible');
-			lineProps.forEach(prop => map.setPaintProperty(type + '-self', prop, mapPaint['line-self'][prop]));
-				
+			// Set new paint properties
 			if (place.parents[0]) {
 				fillProps.forEach(prop => map.setPaintProperty(type + '-fill', prop, mapPaint[children[0] ? 'fill-active' : 'fill-self'][prop]));
-				lineProps.forEach(prop => map.setPaintProperty(type + '-bounds', prop, mapPaint['line-active'][prop]));
+				lineProps.forEach(prop => {
+					map.setPaintProperty(type + '-bounds', prop, mapPaint['line-active'][prop]);
+					map.setPaintProperty(type + '-self', prop, mapPaint['line-self'][prop]);
+				});
 			}
 			if (childType) {
-				map.setLayoutProperty(childType + '-fill', 'visibility', 'visible');
-				map.setLayoutProperty(childType + '-bounds', 'visibility', 'visible');
 				fillProps.forEach(prop => map.setPaintProperty(childType + '-fill', prop, mapPaint['fill-child'][prop]));
 				lineProps.forEach(prop => map.setPaintProperty(childType + '-bounds', prop, mapPaint['line-child'][prop]));
 			}
@@ -139,27 +137,22 @@
 		selected = options.find(d => d.code == ev.detail.code);
 		loadArea(selected.code);
 	}
+
+	function onResize() {
+		cols = window.getComputedStyle(grid).getPropertyValue("grid-template-columns").split(" ").length;
+	}
+
+	$: w && onResize();
 </script>
 
 <Warning/>
 
 {#if place && ew}
-<div class="grid">
-	<div class="text-small">
-		{#if place.parents[0]}
-		{#each place.parents.reverse() as parent, i}
-		<a href="#{parent.code}" on:click="{() => loadArea(parent.code)}">{parent.name}</a>{@html ' &gt; '}
-		{/each}
-		{/if}
-		{place.name}
-	</div>
-</div>
-	
 <div class="grid-2">
 	<div>
 		<span class="text-big">{place.name}</span><br/>
 		{#if place.parents[0]}
-		{types[place.type].name} in {place.parents[place.parents.length - 1].name}
+		{types[place.type].name} in {place.parents[place.parents.length - 1].name}<br/>
 		{/if}
 	</div>
 	<div>
@@ -169,12 +162,21 @@
 	</div>
 </div>
 
-<div class="grid mt">
+
+<div class="grid-2 mts">
+	<div class="text-small">
+		Comparison:
+		<button class="btn" class:btn-active={!overtime} on:click={() => overtime = false}>National figures</button>
+		<button class="btn" class:btn-active={overtime} on:click={() => overtime = true}>Change from 2001</button>
+	</div>
+</div>
+
+<div id="grid" class="mt" bind:clientWidth={w}>
 	<div>
 		<span class="text-label">Population</span>
 		<br/>
 		<span class="text-big">{place.data.population.value['2011'].all.toLocaleString()}</span>
-		<span class="text-change" class:increase="{place.data.population.value.change.all > 0}">{place.data.population.value.change.all}%</span>
+		<span class="{changeClass(place.data.population.value.change.all)}">{changeStr(place.data.population.value.change.all, '%', 1)}</span>
 		{#if quartiles}
 		<div class="chart" style="height: 40px;">
 			<SpineChart data="{[{x: place.data.population.value['2011'].all}]}" ticks="{quartiles.population.value['2011'].all}" formatTick="{d => (d / 1000).toFixed(0)}" suffix="k" scale="sqrt"/>
@@ -187,8 +189,9 @@
 	<div>
 		<span class="text-label">Density</span>
 		<br/>
-		<span class="text-big">{place.data.density.value['2011'].all.toFixed(1)}</span>
-		<span>people per hectare</span>
+		<span class="text-big inline">{place.data.density.value['2011'].all.toFixed(1)}</span>
+		<span class="inline condensed text-small">people<br/>per hectare</span>
+		<span class="inline {changeClass(place.data.population.value.change.all)}">{changeStr(place.data.population.value.change.all, '%', 1)}</span>
 		{#if quartiles}
 		<div class="chart" style="height: 40px;">
 			<SpineChart data="{[{x: place.data.density.value['2011'].all}]}" ticks="{quartiles.density.value['2011'].all}" formatTick="{d => d.toFixed(0)}" scale="sqrt"/>
@@ -202,7 +205,7 @@
 		<span class="text-label">Median Age</span>
 		<br/>
 		<span class="text-big">{place.data.agemed.value['2011'].all}</span>
-		<span class="text-change" class:increase="{place.data.agemed.value['2011'].all - place.data.agemed.value['2001'].all > 0}">{place.data.agemed.value['2011'].all - place.data.agemed.value['2001'].all} yrs</span>
+		<span class="{changeClass(place.data.agemed.value['2011'].all - place.data.agemed.value['2001'].all)}">{changeStr(place.data.agemed.value['2011'].all - place.data.agemed.value['2001'].all, 'yrs')}</span>
 		{#if quartiles}
 		<div class="chart" style="height: 40px;">
 			<SpineChart data="{[{x: place.data.agemed.value['2011'].all}]}" ticks="{quartiles.agemed.value['2011'].all}" formatTick="{d => d.toFixed(0)}" scale="log"/>
@@ -215,19 +218,32 @@
 	<div>
 		<span class="text-label">Age profile</span><br/>
 		<div class="chart" style="height: 85px;">
-			<ColChart data="{place && makeData(['age10yr', 'perc', '2011'])}"/>
+			<ColChart data="{place && makeData(['age10yr', 'perc', '2011'])}" zKey="{overtime ? 'prev' : place.type != 'ew' ? 'ew' : null}"/>
 		</div>
+		{#if !overtime && place.type != 'ew'}
+		<div class="text-small muted"><li class="line"></li> shows England & Wales profile</div>
+		{:else if overtime}
+		<div class="text-small muted"><li class="line"></li> shows 2001 profile</div>
+		{/if}
 	</div>
 	<div>
-		<span class="text-label">Sex</span><br/>
-		<GridChart data="{place && makeData(['population', 'perc', '2011'])}"/>
+		<span class="text-label">Economic activity</span><br/>
+		<StackedBarChart data="{place && makeData(['economic', 'perc', '2011'])}" zKey="{overtime ? 'prev' : place.type != 'ew' ? 'ew' : null}"/>
 	</div>
 	<div>
-		<span class="text-label">General health</span><br/>
-		<GridChart data="{place && makeData(['health', 'perc', '2011'])}"/>
+		<span class="text-label">Travel to work</span><br/>
+		<StackedBarChart data="{place && makeData(['travel', 'perc', '2011'])}" zKey="{overtime ? 'prev' : place.type != 'ew' ? 'ew' : null}"/>
 	</div>
-	<div class="map">
-		<Map bind:map location={{bounds: place.bounds}}>
+	<div>
+		<span class="text-label">Ethnicity</span><br/>
+		<StackedBarChart data="{place && makeData(['ethnicity', 'perc', '2011'])}" zKey="{overtime ? 'prev' : place.type != 'ew' ? 'ew' : null}"/>
+	</div>
+	<div>
+		<span class="text-label">Housing tenure</span><br/>
+		<StackedBarChart data="{place && makeData(['tenure', 'perc', '2011'])}" zKey="{overtime ? 'prev' : place.type != 'ew' ? 'ew' : null}"/>
+	</div>
+	<div id="map" style="grid-column: span {w && w < 575 ? 1 : cols && cols > 2 ? cols - 1 : 2};">
+		<Map bind:map location={{bounds: place.bounds}} style={mapStyle}>
 			<MapSource {...mapSources.wd}>
 				<MapLayer
 					{...mapLayers.wd}
@@ -295,29 +311,32 @@
 		</Map>
 	</div>
 	<div>
-		<span class="text-label">Economic activity</span><br/>
-		<GridChart data="{place && makeData(['economic', 'perc', '2011'])}"/>
-	</div>
-	<div>
-		<span class="text-label">Ethnicity</span><br/>
-		<GridChart data="{place && makeData(['ethnicity', 'perc', '2011'])}"/>
-	</div>
-</div>
-
-{#if place.children[0]}
-<div class="grid mt">
-	<div>
-		<span class="text-label">{place.children[0].typepl} within {place.name}</span><br/>
+		<span class="text-label">Parents of {place.name}</span><br/>
 		<span class="text-small">
+		{#if place.parents[0]}
+		{#each place.parents.reverse() as parent, i}
+		<span style="display: block; margin-left: {i > 0 ? (i - 1) * 15 : 0}px">{@html i > 0 ? '↳ ' : ''}<a href="#{parent.code}" on:click="{() => loadArea(parent.code)}">{parent.name}</a></span>
+		{/each}
+		{:else}
+		<span class="muted">No parents for {place.name}</span>
+		{/if}
+		</span>
+	</div>
+	<div>
+		<span class="text-label">{place.children[0] ? place.children[0].typepl : 'Areas'} within {place.name}</span><br/>
+		<span class="text-small">
+		{#if place.children[0]}
 		{#each place.children as child, i}
 		<a href="#{child.code}" on:click="{() => loadArea(child.code)}">{child.name}</a>{ i < place.children.length - 1 ? ', ' : ''}
 		{/each}
+		{:else}
+		<span class="muted">No areas within {place.name}</span>
+		{/if}
 		</span>
 	</div>
 </div>
-{/if}
 
-<div class="grid-2 mt">
+<div class="grid-2 mt mbs">
 	<div>
 		<img src="https://onsvisual.github.io/svelte-scrolly/img/ons-logo-pos-en.svg" alt="Office for National Statistics"/>
 	</div>
@@ -339,8 +358,20 @@
 	img {
 		width: 200px;
 	}
+	.btn {
+		padding: 2px 4px;
+		margin: 0;
+		border: 2px solid #206095;
+		cursor: pointer;
+		color: #206095;
+		background-color: lightgrey;
+	}
+	.btn-active {
+		color: white;
+		background-color: #206095;
+	}
 	.text-big {
-		font-size: 2em;
+		font-size: 2.2em;
 		font-weight: bold;
 	}
 	.text-small {
@@ -349,9 +380,6 @@
 	.text-label {
 		font-weight: bold;
 	}
-	.text-change {
-		color: red;
-	}
 	.muted {
 		color: grey;
 	}
@@ -359,21 +387,51 @@
 		color: green;
 	}
 	.increase::before {
-		content: "+";
+		content: '▲';
+		color: green;
+	}
+	.decrease {
+		color: red;
+	}
+	.decrease::before {
+		content: '▼';
+		color: red;
+	}
+	.nochange {
+		font-size: 0.85em;
+		color: grey;
+	}
+	.line {
+		background-color: #27A0CC;
+		width: 25px;
+  	height: 2px;
+  	display: inline-block;
+		margin-bottom: 3px;
 	}
 	.right {
 		text-align: right;
 	}
+	.inline {
+		display: inline-block;
+	}
+	.condensed {
+		line-height: 1.1em;
+	}
 	.mt {
 		margin-top: 20px;
 	}
-	.grid {
+	.mts {
+		margin-top: 10px;
+	}
+	.mbs {
+		margin-bottom: 10px;
+	}
+	#grid {
 		display: grid;
 		width: 100%;
 		grid-gap: 20px;
 		grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
 		justify-content: stretch;
-		grid-auto-flow: row dense;
 	}
 	.grid-2 {
 		display: grid;
@@ -382,16 +440,11 @@
 		grid-template-columns: auto auto;
 	}
 	.chart {
+		position: relative;
 		width: 100%;
 	}
-	.map {
-		grid-column: span 2;
+	#map {
 		grid-row: span 2;
-		min-height: 350px;
-	}
-	@media screen and (max-width:575px){
-		.map {
-			grid-column: span 1;
-		}
+		min-height: 450px;
 	}
 	</style>

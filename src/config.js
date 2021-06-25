@@ -45,8 +45,28 @@ export const codes = {
 		{code: 'good'},
 		{code: 'fair'},
 		{code: 'bad'}
+	],
+	tenure: [
+		{code: 'owned', label: 'owner occupied'},
+		{code: 'shared_ownership', label: 'shared ownership'},
+		{code: 'rented_private', label: 'rented (private)'},
+		{code: 'rented_social', label: 'rented (social)'},
+		{code: 'rent_free', label: 'rent free'}
+	],
+	travel: [
+		{code: "train_metro", label: "train/metro"},
+		{code: "bus"},
+		{code: "taxi"},
+		{code: "car_van", label: "car/van"},
+		{code: "moto", label: "motorbike/scooter"},
+		{code: "bicycle"},
+		{code: "foot", label: "on foot"},
+		{code: "home", label: "home worker"},
+		{code: "other"}
 	]
 };
+
+export const mapStyle = 'https://bothness.github.io/ons-basemaps/data/style-omt.json';
 
 export const mapSources = {
 	crd: {

@@ -9,18 +9,20 @@
 	export let decimals = 0;
 	export let fill = '#206095';
 	
-	const xKey = 'x';
-	const yKey = 'y';
+	export let xKey = 'x';
+	export let yKey = 'y';
+	export let zKey= null;
 	
-	$: domain = data.map(d => d[xKey]);
+	$: xDomain = data.map(d => d[xKey]);
+	$: yDomain = [0, Math.max(...data.map(d => d[yKey]))];
 	$: formatVal = d => d.toFixed(decimals) + suffix;
-	
 </script>
 
 <style>
 	.chart-container {
 		width: 100%;
 		height: 100%;
+		position: absolute;
 	}
 </style>
 
@@ -29,9 +31,11 @@
 		padding={{ top: 15, right: 0, bottom: 20, left: 0 }}
 		x={xKey}
 		y={yKey}
+		z={zKey}
 		xScale={scaleBand().paddingInner([0.02]).round(true)}
-		xDomain={domain}
-		yDomain={[0, null]}
+		{xDomain}
+		{yDomain}
+		zDomain={yDomain}
 		data={data}
 	>
 		<Svg>
