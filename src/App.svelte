@@ -10,7 +10,7 @@
 	import MapSource from "./map/MapSource.svelte";
 	import MapLayer from "./map/MapLayer.svelte";
 	
-	let options, selected, place, ew, quartiles, w, cols, charts;
+	let options, selected, place, ew, quartiles, w, cols;
 	let map = null;
 	let active = {
 		selected: null,
@@ -140,7 +140,6 @@
 
 	function onResize() {
 		cols = w < 575 ? 1 : window.getComputedStyle(grid).getPropertyValue("grid-template-columns").split(" ").length;
-		charts = true; // Throttles rendering of charts
 	}
 
 	$: w && onResize();
@@ -173,7 +172,6 @@
 </div>
 
 <div id="grid" class="grid mt" bind:clientWidth={w}>
-	{#if charts}
 	<div>
 		<span class="text-label">Population</span>
 		<br/>
@@ -244,8 +242,7 @@
 		<span class="text-label">Housing tenure</span><br/>
 		<StackedBarChart data="{place && makeData(['tenure', 'perc', '2011'])}" zKey="{overtime ? 'prev' : place.type != 'ew' ? 'ew' : null}"/>
 	</div>
-	{/if}
-	<div id="map" style="grid-column: span {cols == 1 ? 1 : cols && cols > 2 ? cols - 1 : 2};">
+	<div id="map" style="grid-column: span {cols == 2 ? 2 : cols && cols > 2 ? cols - 1 : 1};">
 		<Map bind:map location={{bounds: place.bounds}} style={mapStyle}>
 			<MapSource {...mapSources.wd}>
 				<MapLayer
