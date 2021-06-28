@@ -10,7 +10,7 @@
 	import MapSource from "./map/MapSource.svelte";
 	import MapLayer from "./map/MapLayer.svelte";
 	
-	let options, selected, place, ew, quartiles, w, cols;
+	let options, selected, place, ew, quartiles, w, cols, charts;
 	let map = null;
 	let active = {
 		selected: null,
@@ -139,7 +139,8 @@
 	}
 
 	function onResize() {
-		cols = window.getComputedStyle(grid).getPropertyValue("grid-template-columns").split(" ").length;
+		cols = w < 575 ? 1 : window.getComputedStyle(grid).getPropertyValue("grid-template-columns").split(" ").length;
+		charts = true; // Throttles rendering of charts
 	}
 
 	$: w && onResize();
@@ -148,7 +149,7 @@
 <Warning/>
 
 {#if place && ew}
-<div class="grid-2">
+<div class="grid">
 	<div>
 		<span class="text-big">{place.name}</span><br/>
 		{#if place.parents[0]}
@@ -156,14 +157,14 @@
 		{/if}
 	</div>
 	<div>
-		<div style="width: 240px; float: right;">
+		<div style="width: 260px;" class:float-right={cols > 1}>
 		<Select {options} bind:selected group="typenm" search={true} on:select="{() => { if (selected) { loadArea(selected.code) }}}"/>
 		</div>
 	</div>
 </div>
 
 
-<div class="grid-2 mts">
+<div class="grid mts">
 	<div class="text-small">
 		Comparison:
 		<button class="btn" class:btn-active={!overtime} on:click={() => overtime = false}>National figures</button>
@@ -171,7 +172,8 @@
 	</div>
 </div>
 
-<div id="grid" class="mt" bind:clientWidth={w}>
+<div id="grid" class="grid mt" bind:clientWidth={w}>
+	{#if charts}
 	<div>
 		<span class="text-label">Population</span>
 		<br/>
@@ -242,7 +244,8 @@
 		<span class="text-label">Housing tenure</span><br/>
 		<StackedBarChart data="{place && makeData(['tenure', 'perc', '2011'])}" zKey="{overtime ? 'prev' : place.type != 'ew' ? 'ew' : null}"/>
 	</div>
-	<div id="map" style="grid-column: span {w && w < 575 ? 1 : cols && cols > 2 ? cols - 1 : 2};">
+	{/if}
+	<div id="map" style="grid-column: span {cols == 1 ? 1 : cols && cols > 2 ? cols - 1 : 2};">
 		<Map bind:map location={{bounds: place.bounds}} style={mapStyle}>
 			<MapSource {...mapSources.wd}>
 				<MapLayer
@@ -336,11 +339,11 @@
 	</div>
 </div>
 
-<div class="grid-2 mt mbs">
+<div class="grid mt mbs">
 	<div>
 		<img src="https://onsvisual.github.io/svelte-scrolly/img/ons-logo-pos-en.svg" alt="Office for National Statistics"/>
 	</div>
-	<div class="right">
+	<div class:text-right={cols > 1}>
 		<span class="text-small">Source: Census 2011, with change +/- from Census 2001.</span>
 	</div>
 </div>
@@ -408,8 +411,11 @@
   	display: inline-block;
 		margin-bottom: 3px;
 	}
-	.right {
+	.text-right {
 		text-align: right;
+	}
+	.float-right {
+		float: right;
 	}
 	.inline {
 		display: inline-block;
@@ -426,18 +432,15 @@
 	.mbs {
 		margin-bottom: 10px;
 	}
-	#grid {
-		display: grid;
-		width: 100%;
-		grid-gap: 20px;
-		grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-		justify-content: stretch;
-	}
-	.grid-2 {
+	.grid {
 		display: grid;
 		width: 100%;
 		grid-gap: 10px;
-		grid-template-columns: auto auto;
+		grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+		justify-content: stretch;
+	}
+	#grid {
+		grid-gap: 20px !important;
 	}
 	.chart {
 		position: relative;
