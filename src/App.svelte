@@ -152,7 +152,7 @@
 	<div>
 		<span class="text-big">{place.name}</span><br/>
 		{#if place.parents[0]}
-		{types[place.type].name} in {place.parents[place.parents.length - 1].name}<br/>
+		{types[place.type].name} in {place.parents[0].name}<br/>
 		{/if}
 	</div>
 	<div>
@@ -314,7 +314,7 @@
 		<span class="text-label">Parents of {place.name}</span><br/>
 		<span class="text-small">
 		{#if place.parents[0]}
-		{#each place.parents.reverse() as parent, i}
+		{#each [...place.parents].reverse() as parent, i}
 		<span style="display: block; margin-left: {i > 0 ? (i - 1) * 15 : 0}px">{@html i > 0 ? '↳ ' : ''}<a href="#{parent.code}" on:click="{() => loadArea(parent.code)}">{parent.name}</a></span>
 		{/each}
 		{:else}

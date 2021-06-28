@@ -1,6 +1,6 @@
 <script>
 	import { onMount, setContext } from "svelte";
-	import { Map, NavigationControl } from "mapbox-gl";
+	import { Map, NavigationControl, GeolocateControl } from "mapbox-gl";
 
 	export let map;
 	export let id = "map";
@@ -15,6 +15,9 @@
 	export let minzoom = 0;
 	export let maxzoom = 14;
 	export let zoom = null;
+	export let scrollzoom = true;
+	export let geolocate = true;
+	export let zoomcontrol = true;
 
 	let container;
 	let w;
@@ -50,8 +53,15 @@
 				...options,
 			});
 
-			map.scrollZoom.disable();
-			map.addControl(new NavigationControl());
+			if (zoomcontrol) {
+				map.addControl(new NavigationControl({showCompass: false}));
+			}
+			if (!scrollzoom) {
+				map.scrollZoom.disable();
+			}
+			if (geolocate) {
+				map.addControl(new GeolocateControl());
+			}
 
 			// Get initial zoom level
 			map.on("load", () => {
