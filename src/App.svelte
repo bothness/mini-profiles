@@ -23,9 +23,12 @@
 	
 	getData(urls.options)
 	.then(res => {
+		let lookup = {};
+		res.forEach(d => lookup[d.code] = d.name);
 		res.forEach(d => {
 			d.typepl = types[d.type].pl;
 			d.typenm = types[d.type].name;
+			d.typestr = lookup[d.parent] ? `${types[d.type].name} in ${lookup[d.parent]}` : '';
 		});
 		options = res.sort((a, b) => a.name.localeCompare(b.name));
 		selected = options.find(d => d.name == 'Fareham');
@@ -157,7 +160,7 @@
 	</div>
 	<div>
 		<div style="width: 260px;" class:float-right={cols > 1}>
-		<Select {options} bind:selected group="typenm" search={true} on:select="{() => { if (selected) { loadArea(selected.code) }}}"/>
+		<Select {options} bind:selected group="typestr" search={true} on:select="{() => { if (selected) { loadArea(selected.code) }}}"/>
 		</div>
 	</div>
 </div>
@@ -166,7 +169,7 @@
 <div class="grid mts">
 	<div class="text-small">
 		Comparison:
-		<button class="btn" class:btn-active={!overtime} on:click={() => overtime = false}>National figures</button>
+		<button class="btn" class:btn-active={!overtime} on:click={() => overtime = false}>England & Wales figures</button>
 		<button class="btn" class:btn-active={overtime} on:click={() => overtime = true}>Change from 2001</button>
 	</div>
 </div>
@@ -198,11 +201,11 @@
 		</div>
 		{/if}
 		{#if place.data.density.value_rank}
-		<div class="text-small muted">{place.data.density.value_rank['2011'].all.toLocaleString()}{suffixer(place.data.density.value_rank['2011'].all)} densest of {place.count.toLocaleString()} {types[place.type].pl.toLowerCase()}</div>
+		<div class="text-small muted">{place.data.density.value_rank['2011'].all.toLocaleString()}{suffixer(place.data.density.value_rank['2011'].all)} most densely populated of {place.count.toLocaleString()} {types[place.type].pl.toLowerCase()}</div>
 		{/if}
 	</div>
 	<div>
-		<span class="text-label">Median Age</span>
+		<span class="text-label">Median age</span>
 		<br/>
 		<span class="text-big">{place.data.agemed.value['2011'].all}</span>
 		<span class="{changeClass(place.data.agemed.value['2011'].all - place.data.agemed.value['2001'].all)}">{changeStr(place.data.agemed.value['2011'].all - place.data.agemed.value['2001'].all, 'yrs')}</span>
@@ -221,9 +224,9 @@
 			<ColChart data="{place && makeData(['age10yr', 'perc', '2011'])}" zKey="{overtime ? 'prev' : place.type != 'ew' ? 'ew' : null}"/>
 		</div>
 		{#if !overtime && place.type != 'ew'}
-		<div class="text-small muted"><li class="line"></li> shows England & Wales profile</div>
+		<div class="text-small muted"><li class="line"></li> Shows England & Wales profile</div>
 		{:else if overtime}
-		<div class="text-small muted"><li class="line"></li> shows 2001 profile</div>
+		<div class="text-small muted"><li class="line"></li> Shows 2001 profile</div>
 		{/if}
 	</div>
 	<div>
@@ -350,7 +353,6 @@
 	@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
 	:global(body) {
 		font-family: 'Open Sans', sans-serif;
-		padding: 20px;
 	}
 	a {
 		color: rgb(0, 60, 87);

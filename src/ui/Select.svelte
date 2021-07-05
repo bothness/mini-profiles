@@ -5,7 +5,7 @@
 	
 	export let options;
 	export let selected = null;
-	export let placeholder = "Find an area...";
+	export let placeholder = "Find an area";
 	export let value = "code";
 	export let label = "name";
 	export let group = null;
