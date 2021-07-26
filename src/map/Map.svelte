@@ -18,19 +18,20 @@
 	export let scrollzoom = true;
 	export let geolocate = true;
 	export let zoomcontrol = true;
+	export let options = {};
 
 	let container;
 	let w;
-	let options;
 
 	setContext("map", {
 		getMap: () => map,
 	});
 
 	if (location.bounds) {
-		options = { bounds: location.bounds };
+		options = { ...options, bounds: location.bounds };
 	} else if (location.lon && location.lat) {
 		options = {
+			...options,
 			center: [location.lon, location.lat],
 		};
 		if (location.zoom) {

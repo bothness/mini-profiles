@@ -66,18 +66,18 @@
 		transform: translate(0, 3px);
 	}
 	.increase {
-		color: green;
+		color: darkgreen;
 	}
 	.increase::before {
 		content: '▲';
-		color: green;
+		color: darkgreen;
 	}
 	.decrease {
-		color: red;
+		color: darkred;
 	}
 	.decrease::before {
 		content: '▼';
-		color: red;
+		color: darkred;
 	}
 	.nochange {
 		color: grey;

@@ -1,7 +1,25 @@
+// CORE CONFIG
+export const themes = {
+  'light': {
+		'name': 'light',
+    'text': '#222',
+    'muted': '#777',
+    'pale': '#f0f0f0',
+    'background': '#fff'
+  },
+  'dark': {
+		'name': 'dark',
+    'text': '#fff',
+    'muted': '#bbb',
+    'pale': '#333',
+    'background': '#222'
+  }
+};
+
 export const urls = {
 		options: 'https://raw.githubusercontent.com/ONSvisual/census-data/main/csv/lists/places_2020.csv',
 		places: 'https://raw.githubusercontent.com/ONSvisual/census-data/main/json/place/',
-		quantiles: 'https://raw.githubusercontent.com/ONSvisual/census-data/main/json/quantiles/quartiles_'
+		quantiles: 'https://raw.githubusercontent.com/ONSvisual/census-data/main/json/quantiles/deciles_'
 };
 
 export const types = {
